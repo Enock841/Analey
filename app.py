@@ -78,7 +78,7 @@ def generate_insights(result):      #takes the dict(result) and generates the su
         return interaction.output_text
 
     except Exception as e:
-        return "⚠️ AI insights are temporarily unavailable (rate limit or API issue). Please try again shortly."
+        return st.error(f"⚠️AI insights are temporarily unavailable: {e}")
 
 
 # block to make sure app loads even when csv is uploaded yet
