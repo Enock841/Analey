@@ -18,7 +18,7 @@ def profile_dataset(df):
     # print(df.describe())
     # print(df['category'].unique())
     # print(df['payment_method'].unique())
-    print(df.groupby('category')['quantity'].sum().sort_values(ascending=False))
+    # print(df.groupby('category')['quantity'].sum().sort_values(ascending=False))
 
     print(df['category'].nunique())
     print(df['customer_id'].nunique())

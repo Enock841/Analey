@@ -6,10 +6,14 @@ import os
 from google import genai
 import json
 import streamlit as st
+import plotly.express as px
+
+
 
 st.title("Analey")
 st.write('Your AI Data Analyst')
 st.write('Upload a CSV to get instant stats, charts, and AI-generated insights.')
+
 # makes streamlit accepts csv file on the webapp
 uploaded_file = st.file_uploader("Upload your CSV", type="csv")
 
@@ -18,12 +22,6 @@ uploaded_file = st.file_uploader("Upload your CSV", type="csv")
 def profile_dataset(df):                     
     result = {}
     
-    # df.info()
-    #print(df.head())
-    # print(df.describe())
-    # print(df['category'].unique())
-    # print(df['payment_method'].unique())
-    # st.write(df.groupby(column)['quantity'].sum().sort_values(ascending=False))
     
     
     skewed_cols = []
@@ -39,13 +37,10 @@ def profile_dataset(df):
 
     if 'quantity' in df.columns and 'price' in df.columns:
         df['revenue'] = df['quantity'] * df['price']
-        result['revenue_by_category'] = df.groupby('category')['revenue'].sum().sort_values(ascending= False).to_dict()
-
+        
         result['shape'] = df.shape
         result['null_count'] = df.isnull().sum().to_dict()
-        result['top_category_by_quantity'] = df.groupby('category')['quantity'].sum().sort_values(ascending= False).to_dict()
-
-
+        
         for column in df.select_dtypes(include = 'str'):
             if df[column].nunique() < 50:
                 result[f"revenue_by_{column}"] = df.groupby(column)['revenue'].sum().sort_values(ascending= False).to_dict()
@@ -60,7 +55,7 @@ def generate_insights(result):      #takes the dict(result) and generates the su
 
     st.subheader('AI-Generated Insights')
 
-    prompt = f"""You are a data analyst. Here are statistics from a dataset:
+    prompt = f"""You are a senior data analyst. Here are statistics from a dataset:
 
     {data_summary}
 
@@ -78,7 +73,7 @@ def generate_insights(result):      #takes the dict(result) and generates the su
         return interaction.output_text
 
     except Exception as e:
-        return st.error(f"⚠️AI insights are temporarily unavailable: {e}")
+        return st.error(f"⚠️AI insights are temporarily unavailable")
 
 
 # block to make sure app loads even when csv is uploaded yet
@@ -108,15 +103,30 @@ if uploaded_file is not None:
         except:
             filtered_categorical_cols.append(column)
 
-
-    select_category = st.selectbox('Groupby',filtered_categorical_cols)
-    select_number = st.selectbox('Measure',numerical_cols)
+    with st.sidebar:
+        select_category = st.selectbox('Groupby',filtered_categorical_cols)
+        select_number = st.selectbox('Measure',numerical_cols)
 
 
     #  to generate the charts 
     chart_data = df.groupby(select_category)[select_number].sum().sort_values(ascending=False)
+    total = chart_data.sum()
+    st.write(total)
+
+    # Turn the grouped result into a normal two-column dataframe
+    chart_data_df = chart_data.reset_index()
+
+    # Build a Plotly bar chart
+    fig = px.bar(
+        chart_data_df,
+        x=select_category,
+        y=select_number,
+        color=select_category,
+        )
+
+    st.plotly_chart(fig, use_container_width=True)
     st.write(f"### {select_number} by {select_category}")
-    st.bar_chart(chart_data)
+    
 
 
     result=(profile_dataset(df))
@@ -125,3 +135,5 @@ if uploaded_file is not None:
 
     insights = generate_insights(result)
     st.write(insights)
+
+
