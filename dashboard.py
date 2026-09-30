@@ -8,6 +8,14 @@ import json
 import streamlit as st
 import plotly.express as px
 
+if st.session_state.get("user") is None:
+    st.switch_page("app.py")
+
+with st.sidebar:
+    st.write(f"Signed in as {st.session_state.user['email']}")
+    if st.button("Sign out"):
+        st.session_state.user = None
+        st.switch_page('landing.py')
 
 
 QUANTITY_KEYWORDS = ['quantity', 'qty', 'units', 'sold']
@@ -23,7 +31,8 @@ st.write('Upload a CSV to get instant stats, charts, and AI-generated insights.'
 # makes streamlit accepts csv file on the webapp
 uploaded_file = st.file_uploader("Upload your CSV", type="csv")
 
-    
+
+
 #takes the csv file and works on it to produce the various metrics and returns result(dict)
 def profile_dataset(df,quantity_col, price_col):                 
     result = {}
@@ -47,10 +56,9 @@ def profile_dataset(df,quantity_col, price_col):
         result['shape'] = df.shape
         result['null_count'] = df.isnull().sum().to_dict()
         
-        for column in df.select_dtypes(include = 'str'):
-            if df[column].nunique() < 50:
+        for column in df.select_dtypes(include='str'):
+            if df[column].nunique() < 50 and not is_date_column(df, column):
                 result[f"revenue_by_{column}"] = df.groupby(column)['revenue'].sum().sort_values(ascending= False).to_dict()
-            
 
     return result
 
@@ -80,7 +88,16 @@ def generate_insights(result):      #takes the dict(result) and generates the su
 
     except Exception as e:
         return st.error(f"⚠️AI insights are temporarily unavailable")
-    
+
+
+# checks whether a column header is in date/time format
+def is_date_column(df, column):
+    try:
+        pd.to_datetime(df[column])
+        return True
+    except:
+        return False
+
 
 def find_matching_columns(df, keywords):
     matches = []
@@ -176,10 +193,7 @@ if uploaded_file is not None:
 
     filtered_categorical_cols = []
     for column in categorical_cols:
-        try:
-            pd.to_datetime(df[column])
-            continue
-        except:
+        if not is_date_column(df, column):
             filtered_categorical_cols.append(column)
 
     with st.sidebar:

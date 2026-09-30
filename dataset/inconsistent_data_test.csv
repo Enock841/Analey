@@ -1,0 +1,8 @@
+Product,Region,Sales_Rep,Sale_Date,Price,Quantity
+Desk Lamp,North,Alice,2026-01-15,45.99,120
+Office Chair,South,Bob,01/22/2026,189.50,
+Bookshelf,East,Charlie,22-Jan-2026,"99.00",45
+Standing Desk,West,David,,349.99,30
+Monitor Stand,North,Eve,2026/02/10,29.99,200
+Keyboard Tray,,Frank,03-15-2026,"NaN",75
+Desk Fan,South,Grace,2026-03-20,19.99,
