@@ -1,4 +1,5 @@
 import streamlit as st
+from supabase_client import supabase
 
 st.title("Sign in to Analey")
 
