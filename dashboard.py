@@ -18,8 +18,8 @@ with st.sidebar:
         st.switch_page('landing.py')
 
 
-QUANTITY_KEYWORDS = ['quantity', 'qty', 'units', 'sold']
-PRICE_KEYWORDS = ['price', 'amount', 'cost', 'revenue', 'total']
+QUANTITY_KEYWORDS = ['quantity', 'qty', 'units', 'sold','sales volume']
+PRICE_KEYWORDS = ['price', 'amount', 'cost', 'revenue', 'total','discounted_price','actual_price']
 PRODUCT_KEYWORDS = ['product', 'item', 'sku', 'category', 'type']
 
 
