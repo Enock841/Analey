@@ -9,7 +9,7 @@ import streamlit as st
 import plotly.express as px
 
 if st.session_state.get("user") is None:
-    st.switch_page("app.py")
+    st.switch_page("auth.py")
 
 with st.sidebar:
     st.write(f"Signed in as {st.session_state.user['email']}")
