@@ -56,8 +56,8 @@ def profile_dataset(df,quantity_col, price_col):
         result['shape'] = df.shape
         result['null_count'] = df.isnull().sum().to_dict()
         
-        for column in df.select_dtypes(include='str'):
-            if df[column].nunique() < 50 and not is_date_column(df, column):
+        for column in df.select_dtypes(include=['str','object']):
+            if df[column].nunique() < 1000 and not is_date_column(df, column):
                 result[f"revenue_by_{column}"] = df.groupby(column)['revenue'].sum().sort_values(ascending= False).to_dict()
 
     return result
@@ -169,6 +169,7 @@ if uploaded_file is not None:
                 df[price_col] = df[price_col].str.replace('£', '')
                 df[price_col] = df[price_col].str.replace(',', '')
                 df[price_col] = df[price_col].str.replace('$', '')
+                df[price_col] = df[price_col].str.replace('₹', '')
                 df[price_col] = pd.to_numeric(df[price_col])
             except:
                 pass
