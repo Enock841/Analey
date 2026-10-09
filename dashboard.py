@@ -109,6 +109,20 @@ def find_matching_columns(df, keywords):
     return matches
 
 
+def coerce_numeric_columns(df, threshold=0.8):
+    """Convert text columns like '₹1,099' or '64%' to numbers when most values parse."""
+    df = df.copy()
+    for col in df.columns:
+        is_texty = pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col])
+        if not is_texty:
+            continue
+        cleaned = df[col].astype(str).str.replace(r"[₹$€£,%\s]", "", regex=True)
+        converted = pd.to_numeric(cleaned, errors="coerce")
+        non_null = df[col].notna().sum()
+        if non_null > 0 and converted.notna().sum() / non_null >= threshold:
+            df[col] = converted
+    return df
+
 
 # block to make sure app loads even when csv is uploaded yet
 if uploaded_file is not None:
@@ -141,6 +155,8 @@ if uploaded_file is not None:
     except:
         st.error("An error occured while reading the file. Ensure it's a valid CSV file ")
         st.stop()
+
+    df = coerce_numeric_columns(df)
 
     
     quantity_matches = find_matching_columns(df, QUANTITY_KEYWORDS)
@@ -181,7 +197,9 @@ if uploaded_file is not None:
         price_col = None
 
 
-    categorical_cols = df.select_dtypes(include='object').columns.tolist()
+
+
+    categorical_cols = df.select_dtypes(include=['object','str']).columns.tolist()
     numerical_cols = df.select_dtypes(include='number').columns.tolist()
 
     if not numerical_cols:
@@ -235,11 +253,14 @@ if uploaded_file is not None:
     breakdown_keys = [key for key in result.keys() if key.startswith("revenue_by_")]
     
 
+    if breakdown_keys:
+        selected_breakdown = st.selectbox("View breakdown", breakdown_keys)
+        breakdown_data = result[selected_breakdown]
+        breakdown_df = pd.DataFrame(list(breakdown_data.items()), columns=['Category', 'Value'])
+        st.dataframe(breakdown_df)
+    else:
+        st.info("Revenue breakdown needs both a quantity and a price column, so it was skipped.")
 
-    selected_breakdown = st.selectbox("View breakdown", breakdown_keys)
-    breakdown_data = result[selected_breakdown]
-    breakdown_df = pd.DataFrame(list(breakdown_data.items()), columns=['Category', 'Value'])
-    st.dataframe(breakdown_df)
 
     insights = generate_insights(result)
     st.write(insights) 
