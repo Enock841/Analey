@@ -124,6 +124,9 @@ def coerce_numeric_columns(df, threshold=0.8):
     return df
 
 
+
+
+
 # block to make sure app loads even when csv is uploaded yet
 if uploaded_file is not None:
     try:
@@ -157,6 +160,8 @@ if uploaded_file is not None:
         st.stop()
 
     df = coerce_numeric_columns(df)
+    if 'category' in df.columns:
+        df['main_category'] = df['category'].astype(str).str.split('|').str[0]
 
     
     quantity_matches = find_matching_columns(df, QUANTITY_KEYWORDS)
@@ -210,10 +215,17 @@ if uploaded_file is not None:
         st.dataframe(df.head())
         st.stop()
 
-    filtered_categorical_cols = []
-    for column in categorical_cols:
-        if not is_date_column(df, column)and df[column].nunique() <= 200:
-            filtered_categorical_cols.append(column)
+        filtered_categorical_cols = [
+        column for column in categorical_cols
+        if not is_date_column(df, column) and df[column].nunique() <= 200
+    ]
+
+    # if the filter removed everything, fall back to all non-date text columns
+    if not filtered_categorical_cols:
+        filtered_categorical_cols = [
+            column for column in categorical_cols
+            if not is_date_column(df, column)
+        ]
 
     with st.sidebar:
         select_category = st.selectbox('Groupby',filtered_categorical_cols)
