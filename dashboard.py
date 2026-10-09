@@ -212,7 +212,7 @@ if uploaded_file is not None:
 
     filtered_categorical_cols = []
     for column in categorical_cols:
-        if not is_date_column(df, column):
+        if not is_date_column(df, column)and df[column].nunique() <= 200:
             filtered_categorical_cols.append(column)
 
     with st.sidebar:
@@ -228,26 +228,36 @@ if uploaded_file is not None:
 
 
     #  to generate the charts 
+    
     chart_data = df.groupby(select_category)[select_number].sum().sort_values(ascending=False)
     total = chart_data.sum()
-    
 
-    # Turn the grouped result into a normal two-column dataframe
-    chart_data_df = chart_data.reset_index()
+    # let the user choose how many groups to show
+    top_n = st.sidebar.slider("Top groups to show", min_value=5, max_value=30, value=10)
+    chart_data_df = chart_data.head(top_n).reset_index()
 
-    # Build a Plotly bar chart
+    # shorten long labels (product names can be 100+ characters)
+    chart_data_df[select_category] = (
+        chart_data_df[select_category].astype(str).str.slice(0, 30)
+    )
+
+    # px.bar(...) with a horizontal bar chart
     fig = px.bar(
         chart_data_df,
-        x=select_category,
-        y=select_number,
-        color=select_category,
-        )
+        x=select_number,
+        y=select_category,
+        orientation="h",
+    )
+    fig.update_layout(
+        yaxis={"categoryorder": "total ascending"},  # biggest bar on top
+        showlegend=False,
+        height=max(400, top_n * 35),
+        margin=dict(l=10, r=10, t=30, b=10),
+    )
 
     st.plotly_chart(fig, use_container_width=True)
-    st.write(f"### {select_number} by {select_category}")
-    st.metric(label=f"Total {select_number}", value= total)
-    
-
+    st.write(f"### Top {top_n} {select_category} by {select_number}")
+    st.metric(label=f"Total {select_number}", value=f"{total:,.2f}")
 
     result=(profile_dataset(df,quantity_col, price_col))
     breakdown_keys = [key for key in result.keys() if key.startswith("revenue_by_")]
