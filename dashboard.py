@@ -87,7 +87,7 @@ def generate_insights(result):      #takes the dict(result) and generates the su
         return interaction.output_text
 
     except Exception as e:
-        return st.error(f"⚠️AI insights are temporarily unavailable")
+        return st.error(f"AI insights are temporarily unavailable")
 
 
 # checks whether a column header is in date/time format
@@ -107,23 +107,6 @@ def find_matching_columns(df, keywords):
                 if column not in matches:
                     matches.append(column)
     return matches
-
-
-def coerce_numeric_columns(df, threshold=0.8):
-    """Convert text columns like '₹1,099' or '64%' to numbers when most values parse."""
-    df = df.copy()
-    for col in df.columns:
-        is_texty = pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col])
-        if not is_texty:
-            continue
-        cleaned = df[col].astype(str).str.replace(r"[₹$€£,%\s]", "", regex=True)
-        converted = pd.to_numeric(cleaned, errors="coerce")
-        non_null = df[col].notna().sum()
-        if non_null > 0 and converted.notna().sum() / non_null >= threshold:
-            df[col] = converted
-    return df
-
-
 
 
 
@@ -158,10 +141,6 @@ if uploaded_file is not None:
     except:
         st.error("An error occured while reading the file. Ensure it's a valid CSV file ")
         st.stop()
-
-    df = coerce_numeric_columns(df)
-    if 'category' in df.columns:
-        df['main_category'] = df['category'].astype(str).str.split('|').str[0]
 
     
     quantity_matches = find_matching_columns(df, QUANTITY_KEYWORDS)
@@ -215,17 +194,10 @@ if uploaded_file is not None:
         st.dataframe(df.head())
         st.stop()
 
-        filtered_categorical_cols = [
-        column for column in categorical_cols
-        if not is_date_column(df, column) and df[column].nunique() <= 200
-    ]
-
-    # if the filter removed everything, fall back to all non-date text columns
-    if not filtered_categorical_cols:
-        filtered_categorical_cols = [
-            column for column in categorical_cols
-            if not is_date_column(df, column)
-        ]
+    filtered_categorical_cols = []
+    for column in categorical_cols:
+        if not is_date_column(df, column):
+            filtered_categorical_cols.append(column)
 
     with st.sidebar:
         select_category = st.selectbox('Groupby',filtered_categorical_cols)
@@ -240,49 +212,36 @@ if uploaded_file is not None:
 
 
     #  to generate the charts 
-    
     chart_data = df.groupby(select_category)[select_number].sum().sort_values(ascending=False)
     total = chart_data.sum()
+    
 
-    # let the user choose how many groups to show
-    top_n = st.sidebar.slider("Top groups to show", min_value=5, max_value=30, value=10)
-    chart_data_df = chart_data.head(top_n).reset_index()
+    # Turn the grouped result into a normal two-column dataframe
+    chart_data_df = chart_data.reset_index()
 
-    # shorten long labels (product names can be 100+ characters)
-    chart_data_df[select_category] = (
-        chart_data_df[select_category].astype(str).str.slice(0, 30)
-    )
-
-    # px.bar(...) with a horizontal bar chart
+    # Build a Plotly bar chart
     fig = px.bar(
         chart_data_df,
-        x=select_number,
-        y=select_category,
-        orientation="h",
-    )
-    fig.update_layout(
-        yaxis={"categoryorder": "total ascending"},  # biggest bar on top
-        showlegend=False,
-        height=max(400, top_n * 35),
-        margin=dict(l=10, r=10, t=30, b=10),
-    )
+        x=select_category,
+        y=select_number,
+        color=select_category,
+        )
 
     st.plotly_chart(fig, use_container_width=True)
-    st.write(f"### Top {top_n} {select_category} by {select_number}")
-    st.metric(label=f"Total {select_number}", value=f"{total:,.2f}")
+    st.write(f"### {select_number} by {select_category}")
+    st.metric(label=f"Total {select_number}", value= total)
+    
+
 
     result=(profile_dataset(df,quantity_col, price_col))
     breakdown_keys = [key for key in result.keys() if key.startswith("revenue_by_")]
     
 
-    if breakdown_keys:
-        selected_breakdown = st.selectbox("View breakdown", breakdown_keys)
-        breakdown_data = result[selected_breakdown]
-        breakdown_df = pd.DataFrame(list(breakdown_data.items()), columns=['Category', 'Value'])
-        st.dataframe(breakdown_df)
-    else:
-        st.info("Revenue breakdown needs both a quantity and a price column, so it was skipped.")
 
+    selected_breakdown = st.selectbox("View breakdown", breakdown_keys)
+    breakdown_data = result[selected_breakdown]
+    breakdown_df = pd.DataFrame(list(breakdown_data.items()), columns=['Category', 'Value'])
+    st.dataframe(breakdown_df)
 
     insights = generate_insights(result)
     st.write(insights) 
